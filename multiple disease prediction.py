@@ -12,7 +12,7 @@ st.set_page_config(page_title="Health Assistant", layout="wide", page_icon="🧑
 # Load models and scalers
 model_path = "models"
 
-diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes_trained_model.sav"), "rb"))
+diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes trained_model (1).sav"), "rb"))
 diabetes_scaler = pickle.load(open(os.path.join(model_path, "diabetes_scaler.sav"), "rb"))
 
 heartdisease_model = pickle.load(open(os.path.join(model_path, "heartdisease_trained_model (1).sav"), "rb"))
