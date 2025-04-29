@@ -4,3 +4,4 @@ numpy>=1.24
 pandas
 scikit-learn
 pickle-mixin
+matplotlib
