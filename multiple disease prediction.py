@@ -10,33 +10,87 @@ import pandas as pd
 st.set_page_config(page_title="Health Assistant", layout="wide", page_icon="🧑‍⚕️")
 
 # Load models and scalers
-model_path = "models"  
+model_path = "models"
 
-# Load Diabetes model and scaler
-diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes trained_model (1).sav"), "rb"))
+diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes_trained_model.sav"), "rb"))
 diabetes_scaler = pickle.load(open(os.path.join(model_path, "diabetes_scaler.sav"), "rb"))
 
-# Load Heart Disease model and scaler
 heartdisease_model = pickle.load(open(os.path.join(model_path, "heartdisease_trained_model (1).sav"), "rb"))
 heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_scaler.sav"), "rb"))
 
-# Load Parkinson's model and scaler
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
 
-# Sidebar navigation
-with st.sidebar:
-    selected = option_menu(
-        'Multiple Disease Prediction System',
-        ['Diabetes Prediction', 'Heart Disease Prediction', "Parkinson's Prediction"],
-        menu_icon='hospital-fill',
-        icons=['activity', 'heart', 'person'],
-        default_index=0
-    )
+# Tabs Navigation
+st.title("\U0001F4D6 Multiple Disease Prediction System")
+tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's"])
+
+# Visual Analytics
+with tabs[0]:
+    st.subheader("Visual Analytics")
+    st.markdown("View analytics of input trends and prediction distributions.")
+
+    dummy_data = pd.DataFrame({
+        'Age': np.random.randint(20, 80, 50),
+        'Glucose': np.random.randint(70, 180, 50),
+        'BMI': np.round(np.random.uniform(18.5, 35.0, 50), 1),
+        'Prediction': np.random.choice(['Diabetes', 'Heart', 'Parkinson\'s'], 50)
+    })
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.bar_chart(dummy_data[['Age', 'Glucose']])
+    with col2:
+        st.line_chart(dummy_data[['BMI']])
+
+    st.subheader("Disease Prediction Distribution")
+    pred_counts = dummy_data['Prediction'].value_counts()
+    fig, ax = plt.subplots()
+    ax.pie(pred_counts, labels=pred_counts.index, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')
+    st.pyplot(fig)
+
+# User Profile
+with tabs[1]:
+    st.subheader("User Profile")
+    name = st.text_input("Name")
+    age = st.number_input("Age", min_value=1, max_value=120)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    st.write(f"Welcome, **{name}**! Your age is **{age}** and gender is **{gender}**.")
+    st.info("Your recent predictions will appear here once a prediction is made.")
+
+# Health Tips
+with tabs[2]:
+    st.subheader("Health Tips & Recommendations")
+    disease = st.selectbox("Select a disease to view tips", ["Diabetes", "Heart Disease", "Parkinson's"])
+
+    tips = {
+        "Diabetes": [
+            "Maintain a healthy diet (low sugar/carbs).",
+            "Exercise regularly.",
+            "Monitor blood sugar levels.",
+            "Avoid smoking and excessive alcohol."
+        ],
+        "Heart Disease": [
+            "Eat heart-healthy foods (low cholesterol/sodium).",
+            "Manage stress and get regular sleep.",
+            "Avoid tobacco and limit alcohol.",
+            "Maintain a healthy weight."
+        ],
+        "Parkinson's": [
+            "Engage in physical therapy and exercise.",
+            "Eat a balanced diet rich in fiber.",
+            "Consult doctors about medication.",
+            "Join support groups for mental health."
+        ]
+    }
+
+    for tip in tips[disease]:
+        st.markdown(f"- {tip}")
 
 # Diabetes Prediction Page
-if selected == 'Diabetes Prediction':
-    st.title('Diabetes Prediction using ML')
+with tabs[3]:
+    st.subheader('Diabetes Prediction using ML')
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -57,7 +111,6 @@ if selected == 'Diabetes Prediction':
         Age = st.text_input('Age of the Person')
 
     diab_diagnosis = ''
-
     if st.button('Run Diabetes Prediction'):
         try:
             user_input = np.array([[float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
@@ -67,12 +120,11 @@ if selected == 'Diabetes Prediction':
             diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
         except ValueError:
             st.error("Please enter valid numeric values.")
-
     st.success(diab_diagnosis)
 
 # Heart Disease Prediction Page
-if selected == 'Heart Disease Prediction':
-    st.title('Heart Disease Prediction using ML')
+with tabs[4]:
+    st.subheader('Heart Disease Prediction using ML')
 
     inputs = {}
     fields = ['Age', 'Sex', 'Chest Pain types', 'Resting BP', 'Cholesterol',
@@ -85,7 +137,6 @@ if selected == 'Heart Disease Prediction':
             inputs[field] = st.text_input(field)
 
     heart_diagnosis = ''
-
     if st.button('Heart Disease Test Result'):
         try:
             input_values = [float(inputs[f]) for f in fields]
@@ -95,12 +146,11 @@ if selected == 'Heart Disease Prediction':
             heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
         except ValueError:
             st.error("Please enter valid numeric values.")
-
     st.success(heart_diagnosis)
 
 # Parkinson's Prediction Page
-if selected == "Parkinson's Prediction":
-    st.title("Parkinson's Disease Prediction using ML")
+with tabs[5]:
+    st.subheader("Parkinson's Disease Prediction using ML")
 
     features = ['MDVP:Fo(Hz)', 'MDVP:Fhi(Hz)', 'MDVP:Flo(Hz)', 'MDVP:Jitter(%)', 'MDVP:Jitter(Abs)',
                 'MDVP:RAP', 'MDVP:PPQ', 'Jitter:DDP', 'MDVP:Shimmer', 'MDVP:Shimmer(dB)',
@@ -116,7 +166,6 @@ if selected == "Parkinson's Prediction":
                 user_values.append(val)
 
     parkinsons_diagnosis = ''
-
     if st.button("Parkinson's Test Result"):
         try:
             user_input = np.array([[float(x) for x in user_values]])
@@ -125,5 +174,4 @@ if selected == "Parkinson's Prediction":
             parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
         except ValueError:
             st.error("Please enter valid numeric values.")
-
     st.success(parkinsons_diagnosis)
