@@ -10,8 +10,19 @@ import pandas as pd
 st.set_page_config(page_title="Health Assistant", layout="wide", page_icon="🧑‍⚕️")
 
 # Load models and scalers
-model_path = "models"
+model_path = "models"  # make sure this matches your GitHub repo structure
 
+# CSV file to store prediction logs
+data_log_file = "prediction_logs.csv"
+if not os.path.exists(data_log_file):
+    pd.DataFrame(columns=['Disease', 'Prediction']).to_csv(data_log_file, index=False)
+
+def log_prediction(disease, prediction):
+    df = pd.read_csv(data_log_file)
+    df = pd.concat([df, pd.DataFrame([[disease, prediction]], columns=['Disease', 'Prediction'])], ignore_index=True)
+    df.to_csv(data_log_file, index=False)
+
+# Load models and scalers
 diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes trained_model (1).sav"), "rb"))
 diabetes_scaler = pickle.load(open(os.path.join(model_path, "diabetes_scaler.sav"), "rb"))
 
@@ -21,76 +32,19 @@ heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_sc
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
 
-# Tabs Navigation
-st.title("\U0001F4D6 Multiple Disease Prediction System")
-tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's"])
-
-# Visual Analytics
-with tabs[0]:
-    st.subheader("Visual Analytics")
-    st.markdown("View analytics of input trends and prediction distributions.")
-
-    dummy_data = pd.DataFrame({
-        'Age': np.random.randint(20, 80, 50),
-        'Glucose': np.random.randint(70, 180, 50),
-        'BMI': np.round(np.random.uniform(18.5, 35.0, 50), 1),
-        'Prediction': np.random.choice(['Diabetes', 'Heart', 'Parkinson\'s'], 50)
-    })
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.bar_chart(dummy_data[['Age', 'Glucose']])
-    with col2:
-        st.line_chart(dummy_data[['BMI']])
-
-    st.subheader("Disease Prediction Distribution")
-    pred_counts = dummy_data['Prediction'].value_counts()
-    fig, ax = plt.subplots()
-    ax.pie(pred_counts, labels=pred_counts.index, autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')
-    st.pyplot(fig)
-
-# User Profile
-with tabs[1]:
-    st.subheader("User Profile")
-    name = st.text_input("Name")
-    age = st.number_input("Age", min_value=1, max_value=120)
-    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-    st.write(f"Welcome, **{name}**! Your age is **{age}** and gender is **{gender}**.")
-    st.info("Your recent predictions will appear here once a prediction is made.")
-
-# Health Tips
-with tabs[2]:
-    st.subheader("Health Tips & Recommendations")
-    disease = st.selectbox("Select a disease to view tips", ["Diabetes", "Heart Disease", "Parkinson's"])
-
-    tips = {
-        "Diabetes": [
-            "Maintain a healthy diet (low sugar/carbs).",
-            "Exercise regularly.",
-            "Monitor blood sugar levels.",
-            "Avoid smoking and excessive alcohol."
-        ],
-        "Heart Disease": [
-            "Eat heart-healthy foods (low cholesterol/sodium).",
-            "Manage stress and get regular sleep.",
-            "Avoid tobacco and limit alcohol.",
-            "Maintain a healthy weight."
-        ],
-        "Parkinson's": [
-            "Engage in physical therapy and exercise.",
-            "Eat a balanced diet rich in fiber.",
-            "Consult doctors about medication.",
-            "Join support groups for mental health."
-        ]
-    }
-
-    for tip in tips[disease]:
-        st.markdown(f"- {tip}")
+# Sidebar navigation
+with st.sidebar:
+    selected = option_menu(
+        'Multiple Disease Prediction System',
+        ['Diabetes Prediction', 'Heart Disease Prediction', "Parkinson's Prediction", 'Visual Analytics'],
+        menu_icon='hospital-fill',
+        icons=['activity', 'heart', 'person', 'bar-chart'],
+        default_index=0
+    )
 
 # Diabetes Prediction Page
-with tabs[3]:
-    st.subheader('Diabetes Prediction using ML')
+if selected == 'Diabetes Prediction':
+    st.title('Diabetes Prediction using ML')
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -111,20 +65,24 @@ with tabs[3]:
         Age = st.text_input('Age of the Person')
 
     diab_diagnosis = ''
+
     if st.button('Run Diabetes Prediction'):
         try:
             user_input = np.array([[float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
                                                        Insulin, BMI, DiabetesPedigreeFunction, Age]]])
             std_input = diabetes_scaler.transform(user_input)
             diab_prediction = diabetes_model.predict(std_input)
+            result = 'Positive' if diab_prediction[0] == 1 else 'Negative'
             diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
+            log_prediction('Diabetes', result)
         except ValueError:
             st.error("Please enter valid numeric values.")
+
     st.success(diab_diagnosis)
 
 # Heart Disease Prediction Page
-with tabs[4]:
-    st.subheader('Heart Disease Prediction using ML')
+if selected == 'Heart Disease Prediction':
+    st.title('Heart Disease Prediction using ML')
 
     inputs = {}
     fields = ['Age', 'Sex', 'Chest Pain types', 'Resting BP', 'Cholesterol',
@@ -137,20 +95,24 @@ with tabs[4]:
             inputs[field] = st.text_input(field)
 
     heart_diagnosis = ''
+
     if st.button('Heart Disease Test Result'):
         try:
             input_values = [float(inputs[f]) for f in fields]
             user_input = np.array([input_values])
             std_input = heartdisease_scaler.transform(user_input)
             heart_prediction = heartdisease_model.predict(std_input)
+            result = 'Positive' if heart_prediction[0] == 1 else 'Negative'
             heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
+            log_prediction('Heart Disease', result)
         except ValueError:
             st.error("Please enter valid numeric values.")
+
     st.success(heart_diagnosis)
 
 # Parkinson's Prediction Page
-with tabs[5]:
-    st.subheader("Parkinson's Disease Prediction using ML")
+if selected == "Parkinson's Prediction":
+    st.title("Parkinson's Disease Prediction using ML")
 
     features = ['MDVP:Fo(Hz)', 'MDVP:Fhi(Hz)', 'MDVP:Flo(Hz)', 'MDVP:Jitter(%)', 'MDVP:Jitter(Abs)',
                 'MDVP:RAP', 'MDVP:PPQ', 'Jitter:DDP', 'MDVP:Shimmer', 'MDVP:Shimmer(dB)',
@@ -166,12 +128,42 @@ with tabs[5]:
                 user_values.append(val)
 
     parkinsons_diagnosis = ''
+
     if st.button("Parkinson's Test Result"):
         try:
             user_input = np.array([[float(x) for x in user_values]])
             std_input = parkinsons_scaler.transform(user_input)
             parkinsons_prediction = parkinsons_model.predict(std_input)
+            result = 'Positive' if parkinsons_prediction[0] == 1 else 'Negative'
             parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
+            log_prediction('Parkinson', result)
         except ValueError:
             st.error("Please enter valid numeric values.")
+
     st.success(parkinsons_diagnosis)
+
+# Visual Analytics Section
+if selected == "Visual Analytics":
+    st.title("📊 Visual Analytics Dashboard")
+
+    if os.path.exists(data_log_file):
+        df = pd.read_csv(data_log_file)
+
+        st.subheader("Overall Prediction Counts")
+        summary = df.groupby(['Disease', 'Prediction']).size().unstack(fill_value=0)
+        st.dataframe(summary)
+
+        st.subheader("Bar Chart of Prediction Outcomes")
+        fig, ax = plt.subplots()
+        summary.plot(kind='bar', stacked=False, ax=ax, colormap='Set2')
+        plt.ylabel("Number of Predictions")
+        st.pyplot(fig)
+
+        st.subheader("Pie Chart of Positive Predictions")
+        pos_counts = df[df['Prediction'] == 'Positive']['Disease'].value_counts()
+        fig2, ax2 = plt.subplots()
+        ax2.pie(pos_counts, labels=pos_counts.index, autopct='%1.1f%%', startangle=90)
+        ax2.axis('equal')
+        st.pyplot(fig2)
+    else:
+        st.info("No predictions made yet. Run tests to see analytics.")
