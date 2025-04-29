@@ -5,24 +5,14 @@ from streamlit_option_menu import option_menu
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 # Set page configuration
 st.set_page_config(page_title="Health Assistant", layout="wide", page_icon="🧑‍⚕️")
 
 # Load models and scalers
-model_path = "models"  # make sure this matches your GitHub repo structure
+model_path = "models"
 
-# CSV file to store prediction logs
-data_log_file = "prediction_logs.csv"
-if not os.path.exists(data_log_file):
-    pd.DataFrame(columns=['Disease', 'Prediction']).to_csv(data_log_file, index=False)
-
-def log_prediction(disease, prediction):
-    df = pd.read_csv(data_log_file)
-    df = pd.concat([df, pd.DataFrame([[disease, prediction]], columns=['Disease', 'Prediction'])], ignore_index=True)
-    df.to_csv(data_log_file, index=False)
-
-# Load models and scalers
 diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes trained_model (1).sav"), "rb"))
 diabetes_scaler = pickle.load(open(os.path.join(model_path, "diabetes_scaler.sav"), "rb"))
 
@@ -32,19 +22,34 @@ heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_sc
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
 
+# CSV file to store predictions
+csv_file = "prediction_logs.csv"
+if not os.path.exists(csv_file):
+    df = pd.DataFrame(columns=["timestamp", "disease", "result"])
+    df.to_csv(csv_file, index=False)
+
+def log_prediction(disease, result):
+    df = pd.read_csv(csv_file)
+    df = pd.concat([df, pd.DataFrame.from_records([{
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "disease": disease,
+        "result": result
+    }])], ignore_index=True)
+    df.to_csv(csv_file, index=False)
+
 # Sidebar navigation
 with st.sidebar:
     selected = option_menu(
-        'Multiple Disease Prediction System',
-        ['Diabetes Prediction', 'Heart Disease Prediction', "Parkinson's Prediction", 'Visual Analytics'],
+        'Health Assistant Dashboard',
+        ['Diabetes Prediction', 'Heart Disease Prediction', "Parkinson's Prediction", 'Visual Analytics', 'Health Tips'],
         menu_icon='hospital-fill',
-        icons=['activity', 'heart', 'person', 'bar-chart'],
+        icons=['activity', 'heart', 'person', 'bar-chart', 'capsule'],
         default_index=0
     )
 
 # Diabetes Prediction Page
 if selected == 'Diabetes Prediction':
-    st.title('Diabetes Prediction using ML')
+    st.title('🩸 Diabetes Prediction')
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -64,8 +69,6 @@ if selected == 'Diabetes Prediction':
     with col2:
         Age = st.text_input('Age of the Person')
 
-    diab_diagnosis = ''
-
     if st.button('Run Diabetes Prediction'):
         try:
             user_input = np.array([[float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
@@ -73,16 +76,14 @@ if selected == 'Diabetes Prediction':
             std_input = diabetes_scaler.transform(user_input)
             diab_prediction = diabetes_model.predict(std_input)
             result = 'Positive' if diab_prediction[0] == 1 else 'Negative'
-            diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
-            log_prediction('Diabetes', result)
+            log_prediction("Diabetes", result)
+            st.success(f'The person is {"diabetic" if diab_prediction[0] == 1 else "not diabetic"}')
         except ValueError:
             st.error("Please enter valid numeric values.")
 
-    st.success(diab_diagnosis)
-
 # Heart Disease Prediction Page
 if selected == 'Heart Disease Prediction':
-    st.title('Heart Disease Prediction using ML')
+    st.title('❤️ Heart Disease Prediction')
 
     inputs = {}
     fields = ['Age', 'Sex', 'Chest Pain types', 'Resting BP', 'Cholesterol',
@@ -94,25 +95,21 @@ if selected == 'Heart Disease Prediction':
         with cols[i % 3]:
             inputs[field] = st.text_input(field)
 
-    heart_diagnosis = ''
-
-    if st.button('Heart Disease Test Result'):
+    if st.button('Run Heart Disease Prediction'):
         try:
             input_values = [float(inputs[f]) for f in fields]
             user_input = np.array([input_values])
             std_input = heartdisease_scaler.transform(user_input)
-            heart_prediction = heartdisease_model.predict(std_input)
-            result = 'Positive' if heart_prediction[0] == 1 else 'Negative'
-            heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
-            log_prediction('Heart Disease', result)
+            prediction = heartdisease_model.predict(std_input)
+            result = 'Positive' if prediction[0] == 1 else 'Negative'
+            log_prediction("Heart Disease", result)
+            st.success(f'The person {"has" if prediction[0] == 1 else "does not have"} heart disease')
         except ValueError:
             st.error("Please enter valid numeric values.")
 
-    st.success(heart_diagnosis)
-
 # Parkinson's Prediction Page
 if selected == "Parkinson's Prediction":
-    st.title("Parkinson's Disease Prediction using ML")
+    st.title("🧠 Parkinson's Disease Prediction")
 
     features = ['MDVP:Fo(Hz)', 'MDVP:Fhi(Hz)', 'MDVP:Flo(Hz)', 'MDVP:Jitter(%)', 'MDVP:Jitter(Abs)',
                 'MDVP:RAP', 'MDVP:PPQ', 'Jitter:DDP', 'MDVP:Shimmer', 'MDVP:Shimmer(dB)',
@@ -127,43 +124,56 @@ if selected == "Parkinson's Prediction":
                 val = cols[j].text_input(features[i + j])
                 user_values.append(val)
 
-    parkinsons_diagnosis = ''
-
-    if st.button("Parkinson's Test Result"):
+    if st.button("Run Parkinson's Prediction"):
         try:
             user_input = np.array([[float(x) for x in user_values]])
             std_input = parkinsons_scaler.transform(user_input)
-            parkinsons_prediction = parkinsons_model.predict(std_input)
-            result = 'Positive' if parkinsons_prediction[0] == 1 else 'Negative'
-            parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
-            log_prediction('Parkinson', result)
+            prediction = parkinsons_model.predict(std_input)
+            result = 'Positive' if prediction[0] == 1 else 'Negative'
+            log_prediction("Parkinson's", result)
+            st.success(f'The person {"has" if prediction[0] == 1 else "does not have"} Parkinson's disease')
         except ValueError:
             st.error("Please enter valid numeric values.")
 
-    st.success(parkinsons_diagnosis)
+# Visual Analytics
+if selected == 'Visual Analytics':
+    st.title("📊 Real-Time Health Analytics")
+    df = pd.read_csv(csv_file)
+    
+    st.subheader("Disease Test Counts")
+    col1, col2 = st.columns(2)
 
-# Visual Analytics Section
-if selected == "Visual Analytics":
-    st.title("📊 Visual Analytics Dashboard")
+    with col1:
+        bar_data = df.groupby(['disease', 'result']).size().unstack().fillna(0)
+        st.bar_chart(bar_data)
 
-    if os.path.exists(data_log_file):
-        df = pd.read_csv(data_log_file)
-
-        st.subheader("Overall Prediction Counts")
-        summary = df.groupby(['Disease', 'Prediction']).size().unstack(fill_value=0)
-        st.dataframe(summary)
-
-        st.subheader("Bar Chart of Prediction Outcomes")
+    with col2:
+        pie_data = df['disease'].value_counts()
+        st.write("### Predictions per Disease")
         fig, ax = plt.subplots()
-        summary.plot(kind='bar', stacked=False, ax=ax, colormap='Set2')
-        plt.ylabel("Number of Predictions")
+        ax.pie(pie_data, labels=pie_data.index, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
         st.pyplot(fig)
 
-        st.subheader("Pie Chart of Positive Predictions")
-        pos_counts = df[df['Prediction'] == 'Positive']['Disease'].value_counts()
-        fig2, ax2 = plt.subplots()
-        ax2.pie(pos_counts, labels=pos_counts.index, autopct='%1.1f%%', startangle=90)
-        ax2.axis('equal')
-        st.pyplot(fig2)
-    else:
-        st.info("No predictions made yet. Run tests to see analytics.")
+    st.subheader("Raw Prediction Log")
+    st.dataframe(df.tail(10))
+
+# Health Tips
+if selected == 'Health Tips':
+    st.title("💡 Health Tips & Lifestyle Suggestions")
+    st.markdown("""
+    ### Diabetes
+    - Maintain a balanced diet with low sugar intake
+    - Regular exercise
+    - Monitor blood sugar levels
+
+    ### Heart Disease
+    - Reduce salt and saturated fat
+    - Quit smoking and limit alcohol
+    - Manage stress and cholesterol
+
+    ### Parkinson's
+    - Follow physical therapy and balanced nutrition
+    - Take medications on schedule
+    - Get plenty of rest and mental support
+    """)
