@@ -168,4 +168,31 @@ with tabs[5]:
                 'HNR', 'RPDE', 'DFA', 'spread1', 'spread2', 'D2', 'PPE']
 
     user_values = []
-    for i in ran
+    for i in range(0, len(features), 5):
+        cols = st.columns(5)
+        for j in range(5):
+            if i + j < len(features):
+                val = cols[j].text_input(features[i + j])
+                user_values.append(val)
+
+    parkinsons_diagnosis = ''
+    if st.button("Parkinson's Test Result"):
+        try:
+            user_input = np.array([[float(x) for x in user_values]])
+            std_input = parkinsons_scaler.transform(user_input)
+            parkinsons_prediction = parkinsons_model.predict(std_input)
+            parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
+            track_prediction("Parkinson's", parkinsons_diagnosis)
+        except ValueError:
+            st.error("Please enter valid numeric values.")
+    st.success(parkinsons_diagnosis)
+
+# Display Previous Predictions
+with st.expander("View Previous Predictions"):
+    if len(st.session_state["predictions"]) > 0:
+        for prediction in st.session_state["predictions"]:
+            st.write(f"**Disease**: {prediction['disease']}")
+            st.write(f"**Result**: {prediction['result']}")
+            st.write("-" * 50)
+    else:
+        st.write("No previous predictions available.")
