@@ -164,16 +164,15 @@ with tabs[4]:
 
     heart_diagnosis = ''
    if st.button('Heart Disease Test Result'):
-    try:
-        input_values = [float(inputs[f]) for f in fields]
-        user_input = np.array([input_values])
-        std_input = heartdisease_scaler.transform(user_input)
-        heart_prediction = heartdisease_model.predict(std_input)
-        heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
-        update_prediction_history("Heart Disease", heart_diagnosis)  # Update history after prediction
-    except ValueError:
-        st.error("Please enter valid numeric values.")
-
+       try:
+           input_values = [float(inputs[f]) for f in fields]
+           user_input = np.array([input_values])
+           std_input = heartdisease_scaler.transform(user_input)
+           heart_prediction = heartdisease_model.predict(std_input)
+           heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
+           update_prediction_history("Heart Disease", heart_diagnosis)  # Update history after prediction
+       except ValueError:
+           st.error("Please enter valid numeric values.")
 
 # Parkinson's Prediction Page
 with tabs[5]:
