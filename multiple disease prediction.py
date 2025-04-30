@@ -11,7 +11,6 @@ st.set_page_config(page_title="Health Assistant", layout="wide", page_icon="🧑
 
 # Load models and scalers
 model_path = "models"
-
 diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes trained_model (1).sav"), "rb"))
 diabetes_scaler = pickle.load(open(os.path.join(model_path, "diabetes_scaler.sav"), "rb"))
 
@@ -21,31 +20,37 @@ heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_sc
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
 
+# Initialize session state
+if "predictions" not in st.session_state:
+    st.session_state["predictions"] = []
+if "prediction_count" not in st.session_state:
+    st.session_state["prediction_count"] = 0
+
+def track_prediction(disease, result):
+    st.session_state.prediction_count += 1
+    prediction = {
+        "Prediction Number": st.session_state.prediction_count,
+        "Disease": disease,
+        "Prediction Result": result
+    }
+    st.session_state["predictions"].append(prediction)
+
 # Tabs Navigation
 st.title("\U0001F4D6 Multiple Disease Prediction System")
 tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's"])
 
-# Visual Analytics
+# 1. Visual Analytics
 with tabs[0]:
     st.subheader("Visual Analytics")
     st.markdown("View analytics of input trends and prediction distributions.")
 
-    # Initialize prediction counter
-    if "prediction_count" not in st.session_state:
-        st.session_state.prediction_count = 0
-
-    # Display table for predictions
     st.subheader("Prediction History")
-    prediction_history = []
+    if len(st.session_state["predictions"]) > 0:
+        history_df = pd.DataFrame(st.session_state["predictions"])
+        st.dataframe(history_df)
+    else:
+        st.info("No predictions made yet.")
 
-    if "prediction_history" in st.session_state:
-        prediction_history = st.session_state.prediction_history
-
-    prediction_history_df = pd.DataFrame(prediction_history, columns=["Prediction Number", "Disease", "Prediction Result"])
-
-    st.dataframe(prediction_history_df)
-
-    # Dummy data for Visual Analytics
     dummy_data = pd.DataFrame({
         'Age': np.random.randint(20, 80, 50),
         'Glucose': np.random.randint(70, 180, 50),
@@ -61,40 +66,24 @@ with tabs[0]:
 
     st.subheader("Disease Prediction Distribution")
     pred_counts = dummy_data['Prediction'].value_counts()
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(4, 4))
     ax.pie(pred_counts, labels=pred_counts.index, autopct='%1.1f%%', startangle=90)
     ax.axis('equal')
     st.pyplot(fig)
 
-# Function to handle Disease Prediction Updates
-def update_prediction_history(disease, result):
-    st.session_state.prediction_count += 1
-    prediction_number = st.session_state.prediction_count
-    prediction_entry = {
-        "Prediction Number": prediction_number,
-        "Disease": disease,
-        "Prediction Result": result
-    }
-    if "prediction_history" not in st.session_state:
-        st.session_state.prediction_history = []
-
-    st.session_state.prediction_history.append(prediction_entry)
-
-
-# User Profile
+# 2. User Profile
 with tabs[1]:
     st.subheader("User Profile")
     name = st.text_input("Name")
     age = st.number_input("Age", min_value=1, max_value=120)
     gender = st.selectbox("Gender", ["Male", "Female", "Other"])
     st.write(f"Welcome, **{name}**! Your age is **{age}** and gender is **{gender}**.")
-    st.info("Your recent predictions will appear here once a prediction is made.")
+    st.info("Your recent predictions will appear in the Visual Analytics tab.")
 
-# Health Tips
+# 3. Health Tips
 with tabs[2]:
     st.subheader("Health Tips & Recommendations")
     disease = st.selectbox("Select a disease to view tips", ["Diabetes", "Heart Disease", "Parkinson's"])
-
     tips = {
         "Diabetes": [
             "Maintain a healthy diet (low sugar/carbs).",
@@ -115,81 +104,65 @@ with tabs[2]:
             "Join support groups for mental health."
         ]
     }
-
     for tip in tips[disease]:
         st.markdown(f"- {tip}")
 
-# Dynamic Tracking: Store and Display Recent Predictions
-if "predictions" not in st.session_state:
-    st.session_state["predictions"] = []
-
-def track_prediction(disease, result):
-    prediction = {"disease": disease, "result": result}
-    st.session_state["predictions"].append(prediction)
-
-# Diabetes Prediction Page
+# 4. Diabetes Prediction
 with tabs[3]:
     st.subheader('Diabetes Prediction using ML')
 
     col1, col2, col3 = st.columns(3)
     with col1:
         Pregnancies = st.text_input('Number of Pregnancies')
-    with col2:
-        Glucose = st.text_input('Glucose Level')
-    with col3:
-        BloodPressure = st.text_input('Blood Pressure value')
-    with col1:
         SkinThickness = st.text_input('Skin Thickness value')
-    with col2:
-        Insulin = st.text_input('Insulin Level')
-    with col3:
-        BMI = st.text_input('BMI value')
-    with col1:
         DiabetesPedigreeFunction = st.text_input('Diabetes Pedigree Function value')
     with col2:
+        Glucose = st.text_input('Glucose Level')
+        Insulin = st.text_input('Insulin Level')
         Age = st.text_input('Age of the Person')
+    with col3:
+        BloodPressure = st.text_input('Blood Pressure value')
+        BMI = st.text_input('BMI value')
 
-    diab_diagnosis = ''
     if st.button('Run Diabetes Prediction'):
         try:
-            user_input = np.array([[float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
-                                                       Insulin, BMI, DiabetesPedigreeFunction, Age]]])
+            input_data = [float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
+                                             Insulin, BMI, DiabetesPedigreeFunction, Age]]
+            user_input = np.array([input_data])
             std_input = diabetes_scaler.transform(user_input)
-            diab_prediction = diabetes_model.predict(std_input)
-            diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
-            track_prediction("Diabetes", diab_diagnosis)
+            prediction = diabetes_model.predict(std_input)[0]
+            result = 'The person is diabetic' if prediction == 1 else 'The person is not diabetic'
+            st.success(result)
+            track_prediction("Diabetes", result)
         except ValueError:
             st.error("Please enter valid numeric values.")
-    st.success(diab_diagnosis)
 
-# Heart Disease Prediction Page
+# 5. Heart Disease Prediction
 with tabs[4]:
     st.subheader('Heart Disease Prediction using ML')
-
-    inputs = {}
     fields = ['Age', 'Sex', 'Chest Pain types', 'Resting BP', 'Cholesterol',
               'Fasting Blood Sugar', 'Rest ECG', 'Max Heart Rate',
               'Exercise Induced Angina', 'Oldpeak', 'Slope', 'CA', 'Thal']
-
+    
+    inputs = {}
     cols = st.columns(3)
     for i, field in enumerate(fields):
         with cols[i % 3]:
             inputs[field] = st.text_input(field)
 
-    heart_diagnosis = ''
     if st.button('Heart Disease Test Result'):
         try:
-            input_values = [float(inputs[f]) for f in fields]
-            user_input = np.array([input_values])
+            values = [float(inputs[field]) for field in fields]
+            user_input = np.array([values])
             std_input = heartdisease_scaler.transform(user_input)
-            heart_prediction = heartdisease_model.predict(std_input)
-            heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
-            track_prediction("Heart Disease", heart_diagnosis)
+            prediction = heartdisease_model.predict(std_input)[0]
+            result = 'The person has heart disease' if prediction == 1 else 'The person does not have heart disease'
+            st.success(result)
+            track_prediction("Heart Disease", result)
         except ValueError:
             st.error("Please enter valid numeric values.")
-    st.success(heart_diagnosis)
 
-# Parkinson's Prediction Page
+# 6. Parkinson's Prediction
 with tabs[5]:
     st.subheader("Parkinson's Disease Prediction using ML")
 
@@ -198,32 +171,22 @@ with tabs[5]:
                 'Shimmer:APQ3', 'Shimmer:APQ5', 'MDVP:APQ', 'Shimmer:DDA', 'NHR',
                 'HNR', 'RPDE', 'DFA', 'spread1', 'spread2', 'D2', 'PPE']
 
-    user_values = []
+    parkinsons_input = []
     for i in range(0, len(features), 5):
         cols = st.columns(5)
         for j in range(5):
             if i + j < len(features):
                 val = cols[j].text_input(features[i + j])
-                user_values.append(val)
+                parkinsons_input.append(val)
 
-    parkinsons_diagnosis = ''
     if st.button("Parkinson's Test Result"):
         try:
-            user_input = np.array([[float(x) for x in user_values]])
+            input_data = [float(x) for x in parkinsons_input]
+            user_input = np.array([input_data])
             std_input = parkinsons_scaler.transform(user_input)
-            parkinsons_prediction = parkinsons_model.predict(std_input)
-            parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
-            track_prediction("Parkinson's", parkinsons_diagnosis)
+            prediction = parkinsons_model.predict(std_input)[0]
+            result = "The person has Parkinson's disease" if prediction == 1 else "The person does not have Parkinson's disease"
+            st.success(result)
+            track_prediction("Parkinson's", result)
         except ValueError:
             st.error("Please enter valid numeric values.")
-    st.success(parkinsons_diagnosis)
-
-# Display Previous Predictions
-with st.expander("View Previous Predictions"):
-    if len(st.session_state["predictions"]) > 0:
-        for prediction in st.session_state["predictions"]:
-            st.write(f"**Disease**: {prediction['disease']}")
-            st.write(f"**Result**: {prediction['result']}")
-            st.write("-" * 50)
-    else:
-        st.write("No previous predictions available.")
