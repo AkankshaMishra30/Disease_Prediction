@@ -26,7 +26,6 @@ st.title("\U0001F4D6 Multiple Disease Prediction System")
 tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's"])
 
 # Visual Analytics
-# Visual Analytics
 with tabs[0]:
     st.subheader("Visual Analytics")
     st.markdown("View analytics of input trends and prediction distributions.")
@@ -66,6 +65,22 @@ with tabs[0]:
     ax.pie(pred_counts, labels=pred_counts.index, autopct='%1.1f%%', startangle=90)
     ax.axis('equal')
     st.pyplot(fig)
+
+# Function to handle Disease Prediction Updates
+def update_prediction_history(disease, result):
+    st.session_state.prediction_count += 1
+    prediction_number = st.session_state.prediction_count
+    prediction_entry = {
+        "Prediction Number": prediction_number,
+        "Disease": disease,
+        "Prediction Result": result
+    }
+    if "prediction_history" not in st.session_state:
+        st.session_state.prediction_history = []
+
+    st.session_state.prediction_history.append(prediction_entry)
+
+
 # User Profile
 with tabs[1]:
     st.subheader("User Profile")
@@ -135,18 +150,17 @@ with tabs[3]:
         Age = st.text_input('Age of the Person')
 
     diab_diagnosis = ''
-
-if st.button('Run Diabetes Prediction'):
-    try:
-        user_input = np.array([[float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
-                                                   Insulin, BMI, DiabetesPedigreeFunction, Age]]])
-        std_input = diabetes_scaler.transform(user_input)
-        diab_prediction = diabetes_model.predict(std_input)
-        diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
-        update_prediction_history("Diabetes", diab_diagnosis)  # Update history after prediction
-    except ValueError:
-        st.error("Please enter valid numeric values.")
-
+    if st.button('Run Diabetes Prediction'):
+        try:
+            user_input = np.array([[float(x) for x in [Pregnancies, Glucose, BloodPressure, SkinThickness,
+                                                       Insulin, BMI, DiabetesPedigreeFunction, Age]]])
+            std_input = diabetes_scaler.transform(user_input)
+            diab_prediction = diabetes_model.predict(std_input)
+            diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
+            track_prediction("Diabetes", diab_diagnosis)
+        except ValueError:
+            st.error("Please enter valid numeric values.")
+    st.success(diab_diagnosis)
 
 # Heart Disease Prediction Page
 with tabs[4]:
@@ -170,9 +184,10 @@ with tabs[4]:
             std_input = heartdisease_scaler.transform(user_input)
             heart_prediction = heartdisease_model.predict(std_input)
             heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
-            update_prediction_history("Heart Disease", heart_diagnosis)  # Update history after prediction
+            track_prediction("Heart Disease", heart_diagnosis)
         except ValueError:
             st.error("Please enter valid numeric values.")
+    st.success(heart_diagnosis)
 
 # Parkinson's Prediction Page
 with tabs[5]:
@@ -192,16 +207,16 @@ with tabs[5]:
                 user_values.append(val)
 
     parkinsons_diagnosis = ''
-
-if st.button("Parkinson's Test Result"):
-    try:
-        user_input = np.array([[float(x) for x in user_values]])
-        std_input = parkinsons_scaler.transform(user_input)
-        parkinsons_prediction = parkinsons_model.predict(std_input)
-        parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
-        update_prediction_history("Parkinson's", parkinsons_diagnosis)  # Update history after prediction
-    except ValueError:
-        st.error("Please enter valid numeric values.")
+    if st.button("Parkinson's Test Result"):
+        try:
+            user_input = np.array([[float(x) for x in user_values]])
+            std_input = parkinsons_scaler.transform(user_input)
+            parkinsons_prediction = parkinsons_model.predict(std_input)
+            parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
+            track_prediction("Parkinson's", parkinsons_diagnosis)
+        except ValueError:
+            st.error("Please enter valid numeric values.")
+    st.success(parkinsons_diagnosis)
 
 # Display Previous Predictions
 with st.expander("View Previous Predictions"):
