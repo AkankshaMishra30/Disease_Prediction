@@ -12,7 +12,7 @@ st.set_page_config(page_title="Health Assistant", layout="wide", page_icon="🧑
 # Load models and scalers
 model_path = "models"
 
-diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes trained_model (1).sav"), "rb"))
+diabetes_model = pickle.load(open(os.path.join(model_path, "diabetes_trained_model (1).sav"), "rb"))
 diabetes_scaler = pickle.load(open(os.path.join(model_path, "diabetes_scaler.sav"), "rb"))
 
 heartdisease_model = pickle.load(open(os.path.join(model_path, "heartdisease_trained_model (1).sav"), "rb"))
@@ -20,12 +20,6 @@ heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_sc
 
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
-
-# Setup CSV to log predictions
-csv_file = 'predictions_log.csv'
-if not os.path.exists(csv_file):
-    df = pd.DataFrame(columns=["Disease", "Prediction", "Details", "Timestamp"])
-    df.to_csv(csv_file, index=False)
 
 # Tabs Navigation
 st.title("\U0001F4D6 Multiple Disease Prediction System")
@@ -91,15 +85,16 @@ with tabs[2]:
         ]
     }
 
-# Function to log the prediction to CSV
-def log_prediction(disease, prediction, details):
-    df = pd.read_csv(csv_file)
-    new_entry = pd.DataFrame([[disease, prediction, details, pd.Timestamp.now()]], columns=["Disease", "Prediction", "Details", "Timestamp"])
-    df = pd.concat([df, new_entry], ignore_index=True)
-    df.to_csv(csv_file, index=False)
-    
     for tip in tips[disease]:
         st.markdown(f"- {tip}")
+
+# Dynamic Tracking: Store and Display Recent Predictions
+if "predictions" not in st.session_state:
+    st.session_state["predictions"] = []
+
+def track_prediction(disease, result):
+    prediction = {"disease": disease, "result": result}
+    st.session_state["predictions"].append(prediction)
 
 # Diabetes Prediction Page
 with tabs[3]:
@@ -131,6 +126,7 @@ with tabs[3]:
             std_input = diabetes_scaler.transform(user_input)
             diab_prediction = diabetes_model.predict(std_input)
             diab_diagnosis = 'The person is diabetic' if diab_prediction[0] == 1 else 'The person is not diabetic'
+            track_prediction("Diabetes", diab_diagnosis)
         except ValueError:
             st.error("Please enter valid numeric values.")
     st.success(diab_diagnosis)
@@ -157,6 +153,7 @@ with tabs[4]:
             std_input = heartdisease_scaler.transform(user_input)
             heart_prediction = heartdisease_model.predict(std_input)
             heart_diagnosis = 'The person has heart disease' if heart_prediction[0] == 1 else 'The person does not have heart disease'
+            track_prediction("Heart Disease", heart_diagnosis)
         except ValueError:
             st.error("Please enter valid numeric values.")
     st.success(heart_diagnosis)
@@ -171,46 +168,4 @@ with tabs[5]:
                 'HNR', 'RPDE', 'DFA', 'spread1', 'spread2', 'D2', 'PPE']
 
     user_values = []
-    for i in range(0, len(features), 5):
-        cols = st.columns(5)
-        for j in range(5):
-            if i + j < len(features):
-                val = cols[j].text_input(features[i + j])
-                user_values.append(val)
-
-    parkinsons_diagnosis = ''
-    if st.button("Parkinson's Test Result"):
-        try:
-            user_input = np.array([[float(x) for x in user_values]])
-            std_input = parkinsons_scaler.transform(user_input)
-            parkinsons_prediction = parkinsons_model.predict(std_input)
-            parkinsons_diagnosis = "The person has Parkinson's disease" if parkinsons_prediction[0] == 1 else "The person does not have Parkinson's disease"
-        except ValueError:
-            st.error("Please enter valid numeric values.")
-    st.success(parkinsons_diagnosis)
-
-# Display the prediction logs (dynamic tracking)
-st.title("Prediction Log")
-df = pd.read_csv(csv_file)
-st.dataframe(df)
-
-# Visualizing predictions dynamically
-st.title("Prediction Statistics")
-
-# Load prediction data
-df = pd.read_csv(csv_file)
-
-# Count how many predictions are positive or negative for each disease
-diabetes_stats = df[df['Disease'] == 'Diabetes']['Prediction'].value_counts()
-heart_stats = df[df['Disease'] == 'Heart Disease']['Prediction'].value_counts()
-parkinsons_stats = df[df['Disease'] == "Parkinson's Disease"]['Prediction'].value_counts()
-
-# Display bar charts
-st.subheader("Diabetes Prediction Stats")
-st.bar_chart(diabetes_stats)
-
-st.subheader("Heart Disease Prediction Stats")
-st.bar_chart(heart_stats)
-
-st.subheader("Parkinson's Disease Prediction Stats")
-st.bar_chart(parkinsons_stats)
+    for i in ran
