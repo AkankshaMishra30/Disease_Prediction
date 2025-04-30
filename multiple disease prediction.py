@@ -21,6 +21,12 @@ heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_sc
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
 
+# Setup CSV to log predictions
+csv_file = 'predictions_log.csv'
+if not os.path.exists(csv_file):
+    df = pd.DataFrame(columns=["Disease", "Prediction", "Details", "Timestamp"])
+    df.to_csv(csv_file, index=False)
+
 # Tabs Navigation
 st.title("\U0001F4D6 Multiple Disease Prediction System")
 tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's"])
@@ -85,6 +91,13 @@ with tabs[2]:
         ]
     }
 
+# Function to log the prediction to CSV
+def log_prediction(disease, prediction, details):
+    df = pd.read_csv(csv_file)
+    new_entry = pd.DataFrame([[disease, prediction, details, pd.Timestamp.now()]], columns=["Disease", "Prediction", "Details", "Timestamp"])
+    df = pd.concat([df, new_entry], ignore_index=True)
+    df.to_csv(csv_file, index=False)
+    
     for tip in tips[disease]:
         st.markdown(f"- {tip}")
 
@@ -175,6 +188,11 @@ with tabs[5]:
         except ValueError:
             st.error("Please enter valid numeric values.")
     st.success(parkinsons_diagnosis)
+
+# Display the prediction logs (dynamic tracking)
+st.title("Prediction Log")
+df = pd.read_csv(csv_file)
+st.dataframe(df)
 
 # Visualizing predictions dynamically
 st.title("Prediction Statistics")
