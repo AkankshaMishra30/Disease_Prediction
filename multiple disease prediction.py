@@ -199,7 +199,7 @@ import numpy as np
 import pickle
 
 # Load the quick_check_model.pkl file
-with open('quick_check_parkinsons_model.pkl', 'rb') as f:
+with open('quick_check_model.pkl', 'rb') as f:
     quick_check_model = pickle.load(f)
 
 # Quick Check Tab
