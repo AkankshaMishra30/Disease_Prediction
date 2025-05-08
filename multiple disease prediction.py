@@ -206,25 +206,37 @@ with open('quick_check_model.pkl', 'rb') as f:
 with tabs[6]:  # Add this as a new tab
     st.subheader("Quick Check Parkinson's Disease Prediction")
 
-    # Collect input from user (age, gender, symptoms)
+    # Age and Gender inputs
     age = st.number_input("Age", min_value=0, max_value=100, step=1)
-    gender = st.selectbox("Gender", options=[0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
-    tremor = st.selectbox("Tremor", options=[0, 1])
-    speech_issues = st.selectbox("Speech Issues", options=[0, 1])
-    slowness = st.selectbox("Slowness", options=[0, 1])
-    rigidity = st.selectbox("Rigidity", options=[0, 1])
-    imbalance = st.selectbox("Imbalance", options=[0, 1])
-    small_handwriting = st.selectbox("Small Handwriting", options=[0, 1])
-    depression = st.selectbox("Depression", options=[0, 1])
-    family_history = st.selectbox("Family History", options=[0, 1])
+    gender_str = st.selectbox("Gender", options=["Female", "Male"])
+    gender = 1 if gender_str == "Male" else 0
 
-    # Collect user input into an array
+    # Symptom inputs (Yes/No style)
+    tremor_str = st.selectbox("Do you experience tremors?", options=["No", "Yes"])
+    speech_issues_str = st.selectbox("Do you have speech issues?", options=["No", "Yes"])
+    slowness_str = st.selectbox("Do you feel bodily slowness?", options=["No", "Yes"])
+    rigidity_str = st.selectbox("Do you feel body rigidity?", options=["No", "Yes"])
+    imbalance_str = st.selectbox("Do you experience imbalance or posture issues?", options=["No", "Yes"])
+    small_handwriting_str = st.selectbox("Has your handwriting become smaller?", options=["No", "Yes"])
+    depression_str = st.selectbox("Do you feel depressed often?", options=["No", "Yes"])
+    family_history_str = st.selectbox("Is there a family history of Parkinson's?", options=["No", "Yes"])
+
+    # Convert to binary for model input
+    tremor = 1 if tremor_str == "Yes" else 0
+    speech_issues = 1 if speech_issues_str == "Yes" else 0
+    slowness = 1 if slowness_str == "Yes" else 0
+    rigidity = 1 if rigidity_str == "Yes" else 0
+    imbalance = 1 if imbalance_str == "Yes" else 0
+    small_handwriting = 1 if small_handwriting_str == "Yes" else 0
+    depression = 1 if depression_str == "Yes" else 0
+    family_history = 1 if family_history_str == "Yes" else 0
+
+    # Model input
     quick_check_input = np.array([[age, gender, tremor, speech_issues, slowness, rigidity, imbalance,
                                    small_handwriting, depression, family_history]])
 
     if st.button("Quick Check Parkinson's Test Result"):
         try:
-            # Predict using the loaded model
             prediction = quick_check_model.predict(quick_check_input)[0]
             result = "The person may have Parkinson's disease" if prediction == 1 else "The person does not have Parkinson's disease"
             st.success(result)
