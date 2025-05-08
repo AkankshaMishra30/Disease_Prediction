@@ -194,43 +194,39 @@ with tabs[5]:
         except ValueError:
             st.error("Please enter valid numeric values.")
             
-# New Tab: Quick Check Parkinson’s
-with tabs[6]:
-    st.title('Quick Check for Parkinson’s Disease')
+import streamlit as st
+import numpy as np
+import pickle
 
-    # Input fields
-    age = st.number_input('Age', min_value=1, max_value=120, step=1)
-    gender = st.selectbox('Gender', ['Male', 'Female'])
-    gender_binary = 1 if gender == 'Male' else 0
+# Load the quick_check_model.pkl file
+with open('quick_check_parkinsons_model.pkl', 'rb') as f:
+    quick_check_model = pickle.load(f)
 
-    tremor = st.selectbox('Do you experience tremors?', ['No', 'Yes'])
-    speech_issues = st.selectbox('Do you have speech issues?', ['No', 'Yes'])
-    slowness = st.selectbox('Do you feel slowness in movement?', ['No', 'Yes'])
-    rigidity = st.selectbox('Do you experience muscle stiffness (rigidity)?', ['No', 'Yes'])
-    imbalance = st.selectbox('Do you have balance issues?', ['No', 'Yes'])
-    handwriting = st.selectbox('Has your handwriting become smaller?', ['No', 'Yes'])
-    depression = st.selectbox('Do you often feel depressed or low?', ['No', 'Yes'])
-    family_history = st.selectbox('Any family history of Parkinson’s?', ['No', 'Yes'])
+# Quick Check Tab
+with tabs[6]:  # Add this as a new tab
+    st.subheader("Quick Check Parkinson's Disease Prediction")
 
-    # Convert inputs to binary
-    inputs = [
-        age,
-        gender_binary,
-        1 if tremor == 'Yes' else 0,
-        1 if speech_issues == 'Yes' else 0,
-        1 if slowness == 'Yes' else 0,
-        1 if rigidity == 'Yes' else 0,
-        1 if imbalance == 'Yes' else 0,
-        1 if handwriting == 'Yes' else 0,
-        1 if depression == 'Yes' else 0,
-        1 if family_history == 'Yes' else 0,
-    ]
+    # Collect input from user (age, gender, symptoms)
+    age = st.number_input("Age", min_value=0, max_value=100, step=1)
+    gender = st.selectbox("Gender", options=[0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
+    tremor = st.selectbox("Tremor", options=[0, 1])
+    speech_issues = st.selectbox("Speech Issues", options=[0, 1])
+    slowness = st.selectbox("Slowness", options=[0, 1])
+    rigidity = st.selectbox("Rigidity", options=[0, 1])
+    imbalance = st.selectbox("Imbalance", options=[0, 1])
+    small_handwriting = st.selectbox("Small Handwriting", options=[0, 1])
+    depression = st.selectbox("Depression", options=[0, 1])
+    family_history = st.selectbox("Family History", options=[0, 1])
 
-    if st.button('Run Quick Check'):
-        input_array = np.array([inputs])
-        result = quick_check_model.predict(input_array)
+    # Collect user input into an array
+    quick_check_input = np.array([[age, gender, tremor, speech_issues, slowness, rigidity, imbalance,
+                                   small_handwriting, depression, family_history]])
 
-        if result[0] == 1:
-            st.error("This quick check indicates a possible presence of Parkinson’s Disease. Please consult a medical professional for a proper diagnosis.")
-        else:
-            st.success("This quick check does not indicate signs of Parkinson’s Disease.")
+    if st.button("Quick Check Parkinson's Test Result"):
+        try:
+            # Predict using the loaded model
+            prediction = quick_check_model.predict(quick_check_input)[0]
+            result = "The person may have Parkinson's disease" if prediction == 1 else "The person does not have Parkinson's disease"
+            st.success(result)
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
