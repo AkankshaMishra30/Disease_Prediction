@@ -195,7 +195,7 @@ with tabs[5]:
             st.error("Please enter valid numeric values.")
             
 # New Tab: Quick Check Parkinson’s
-if selected == 'Quick Check - Parkinson\'s':
+with tabs[6]:
     st.title('Quick Check for Parkinson’s Disease')
 
     # Input fields
