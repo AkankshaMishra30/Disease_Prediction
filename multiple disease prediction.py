@@ -20,6 +20,9 @@ heartdisease_scaler = pickle.load(open(os.path.join(model_path, "heartdisease_sc
 parkinsons_model = pickle.load(open(os.path.join(model_path, "parkinsons_trained_model (1).sav"), "rb"))
 parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.sav"), "rb"))
 
+parkinsons_model = pickle.load(open(os.path.join(model_path, "quick_check_model.pkl"), "rb"))
+parkinsons_scaler = pickle.load(open(os.path.join(model_path, "parkinsons_scaler.pkl"), "rb"))
+
 # Initialize session state
 if "predictions" not in st.session_state:
     st.session_state["predictions"] = []
@@ -37,7 +40,7 @@ def track_prediction(disease, result):
 
 # Tabs Navigation
 st.title("\U0001F4D6 Multiple Disease Prediction System")
-tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's"])
+tabs = st.tabs(["📈 Visual Analytics", "👤 User Profile", "🌿 Health Tips", "🌊 Diabetes", "❤️ Heart Disease", "🧠 Parkinson's", "🏃🏻 Quick Check - Parkinson's"])
 
 # 1. Visual Analytics
 with tabs[0]:
@@ -190,3 +193,44 @@ with tabs[5]:
             track_prediction("Parkinson's", result)
         except ValueError:
             st.error("Please enter valid numeric values.")
+            
+# New Tab: Quick Check Parkinson’s
+if selected == 'Quick Check - Parkinson\'s':
+    st.title('Quick Check for Parkinson’s Disease')
+
+    # Input fields
+    age = st.number_input('Age', min_value=1, max_value=120, step=1)
+    gender = st.selectbox('Gender', ['Male', 'Female'])
+    gender_binary = 1 if gender == 'Male' else 0
+
+    tremor = st.selectbox('Do you experience tremors?', ['No', 'Yes'])
+    speech_issues = st.selectbox('Do you have speech issues?', ['No', 'Yes'])
+    slowness = st.selectbox('Do you feel slowness in movement?', ['No', 'Yes'])
+    rigidity = st.selectbox('Do you experience muscle stiffness (rigidity)?', ['No', 'Yes'])
+    imbalance = st.selectbox('Do you have balance issues?', ['No', 'Yes'])
+    handwriting = st.selectbox('Has your handwriting become smaller?', ['No', 'Yes'])
+    depression = st.selectbox('Do you often feel depressed or low?', ['No', 'Yes'])
+    family_history = st.selectbox('Any family history of Parkinson’s?', ['No', 'Yes'])
+
+    # Convert inputs to binary
+    inputs = [
+        age,
+        gender_binary,
+        1 if tremor == 'Yes' else 0,
+        1 if speech_issues == 'Yes' else 0,
+        1 if slowness == 'Yes' else 0,
+        1 if rigidity == 'Yes' else 0,
+        1 if imbalance == 'Yes' else 0,
+        1 if handwriting == 'Yes' else 0,
+        1 if depression == 'Yes' else 0,
+        1 if family_history == 'Yes' else 0,
+    ]
+
+    if st.button('Run Quick Check'):
+        input_array = np.array([inputs])
+        result = quick_check_model.predict(input_array)
+
+        if result[0] == 1:
+            st.error("This quick check indicates a possible presence of Parkinson’s Disease. Please consult a medical professional for a proper diagnosis.")
+        else:
+            st.success("This quick check does not indicate signs of Parkinson’s Disease.")
