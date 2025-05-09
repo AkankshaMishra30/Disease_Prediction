@@ -238,7 +238,7 @@ with tabs[6]:  # Add this as a new tab
     if st.button("Quick Check Parkinson's Test Result"):
         try:
             prediction = quick_check_model.predict(quick_check_input)[0]
-            result = "The person may have Parkinson's disease" if prediction == 1 else "The person does not have Parkinson's disease"
+            result = "The person may have Parkinson's disease" if prediction == 1 else "The person may not have Parkinson's disease"
             st.success(result)
         except Exception as e:
             st.error(f"Error: {str(e)}")
